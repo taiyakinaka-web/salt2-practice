@@ -71,7 +71,9 @@ async function api<T>(
   if (!response.ok) {
     const error = await response.json().catch(() => null);
     if (response.status === 401 && csrf && path !== "/auth/logout")
-      window.dispatchEvent(new CustomEvent("session-expired", { detail: csrf }));
+      window.dispatchEvent(
+        new CustomEvent("session-expired", { detail: csrf }),
+      );
     throw new ApiError(
       response.status,
       typeof error?.message === "string"
@@ -97,7 +99,9 @@ function Icon({
     | "arrow"
     | "upload"
     | "spark"
-    | "logout";
+    | "logout"
+    | "eye"
+    | "eye-off";
   size?: number;
 }) {
   const paths = {
@@ -129,6 +133,17 @@ function Icon({
     spark: (
       <>
         <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    "eye-off": (
+      <>
+        <path d="m3 3 18 18M10.6 5.1A12 12 0 0 1 12 5c6.5 0 10 7 10 7a20 20 0 0 1-3 3.9M6.3 6.3A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.7-1.7M9.9 9.9a3 3 0 0 0 4.2 4.2" />
       </>
     ),
     logout: (
@@ -203,6 +218,7 @@ function Login({
 }) {
   const [email, setEmail] = useState(previousEmail);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: React.FormEvent) {
@@ -229,28 +245,35 @@ function Login({
           <span className="brand-icon">
             <Icon name="cards" size={27} />
           </span>
-          <span>
-            名刺ノート<small>MEISHI NOTE</small>
-          </span>
+          <span>名刺ノート</span>
         </div>
-        <div>
-          <span className="eyebrow">YOUR CONNECTIONS, ORGANIZED</span>
+        <div className="login-intro">
+          <div className="notebook-art" aria-hidden="true">
+            <div className="paper-card back" />
+            <div className="paper-card front">
+              <span className="paper-stamp">名刺</span>
+              <div className="paper-lines">
+                <i />
+                <i />
+                <i />
+              </div>
+            </div>
+          </div>
           <h1>
-            出会いを、
+            手元の一枚を、
             <br />
-            次のつながりへ。
+            チームの名刺帳へ。
           </h1>
           <p>
-            名刺を読み取り、情報を整え、
+            名刺を取り込み、探しやすく整理する。
             <br />
-            必要な人と共有する。チームの名刺管理をひとつに。
+            必要な相手に、必要な情報を共有できます。
           </p>
         </div>
-        <span className="story-footer">BUSINESS CARD WORKSPACE</span>
+        <span className="story-footer">名刺の保管・検索・共有</span>
       </div>
       <section className="login-form">
         <div className="login-inner">
-          <span className="eyebrow teal">WELCOME BACK</span>
           <h2>{previousEmail ? "再ログイン" : "ログイン"}</h2>
           <p className="muted">
             {previousEmail
@@ -271,16 +294,30 @@ function Login({
                 placeholder="name@example.com"
               />
             </label>
-            <label>
-              パスワード
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
+            <div>
+              <label htmlFor="login-password">パスワード</label>
+              <div className="password-field">
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  aria-label={
+                    showPassword ? "パスワードを隠す" : "パスワードを表示"
+                  }
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  <Icon name={showPassword ? "eye-off" : "eye"} />
+                </button>
+              </div>
+            </div>
             <button className="primary wide" disabled={busy}>
               {busy ? "ログイン中…" : "ログイン"}
               <Icon name="arrow" size={17} />
@@ -340,9 +377,8 @@ function CardList({
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow teal">YOUR CONNECTIONS</span>
           <h1>名刺一覧</h1>
-          <p>出会った人と、つながりを見つける。</p>
+          <p>登録した名刺を、氏名や会社名から探せます。</p>
         </div>
         <button className="primary" onClick={register}>
           <Icon name="plus" />
@@ -629,7 +665,6 @@ function Registration({
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow teal">ADD A CONNECTION</span>
           <h1>名刺を登録</h1>
           <p>画像を取り込み、読み取った内容を確認して保存します。</p>
         </div>
@@ -650,13 +685,26 @@ function Registration({
             {pendingFile.name} に差し替えるときの入力内容を選んでください。
           </p>
           <div className="replacement-actions">
-            <button type="button" className="secondary" autoFocus onClick={() => replaceImage(true)}>
+            <button
+              type="button"
+              className="secondary"
+              autoFocus
+              onClick={() => replaceImage(true)}
+            >
               別の名刺としてクリア
             </button>
-            <button type="button" className="secondary" onClick={() => replaceImage(false)}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => replaceImage(false)}
+            >
               同じ名刺の撮り直しとして保持
             </button>
-            <button type="button" className="text-button" onClick={() => setPendingFile(null)}>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => setPendingFile(null)}
+            >
               キャンセル
             </button>
           </div>
@@ -783,7 +831,10 @@ function Registration({
           </fieldset>
           <div className="form-footer">
             <span className="helper">元画像と確認済みの情報を保存します</span>
-            <button className="primary" disabled={!file || !!busy || !!pendingFile}>
+            <button
+              className="primary"
+              disabled={!file || !!busy || !!pendingFile}
+            >
               {busy === "save" ? "保存中…" : "名刺を登録する"}
               <Icon name="arrow" size={17} />
             </button>
@@ -840,7 +891,6 @@ function Detail({
         <>
           <div className="page-heading">
             <div>
-              <span className="eyebrow teal">CONNECTION DETAILS</span>
               <h1>{card.name}</h1>
               <p>{card.company_name || "会社名未登録"}</p>
             </div>
@@ -1071,7 +1121,6 @@ function Admin({ auth }: { auth: Auth }) {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow teal">TEAM SETTINGS</span>
           <h1>利用者と閲覧許可</h1>
           <p>チームのアカウントと、共有する名刺の範囲を管理します。</p>
         </div>
@@ -1236,7 +1285,11 @@ function Admin({ auth }: { auth: Auth }) {
               <button
                 className="primary"
                 disabled={
-                  !!busy || !selected || !target || loadingGrants || !!grantsError
+                  !!busy ||
+                  !selected ||
+                  !target ||
+                  loadingGrants ||
+                  !!grantsError
                 }
               >
                 {busy === "grant" ? "付与中…" : "閲覧許可を付与"}
@@ -1405,11 +1458,9 @@ export default function App() {
             <span className="brand-icon">
               <Icon name="cards" size={25} />
             </span>
-            <span>
-              名刺ノート<small>MEISHI NOTE</small>
-            </span>
+            <span>名刺ノート</span>
           </a>
-          <div className="nav-label">WORKSPACE</div>
+          <div className="nav-label">名刺管理</div>
           <nav>
             <a className={route === "/" || detailId ? "active" : ""} href="#/">
               <Icon name="cards" />
@@ -1421,8 +1472,11 @@ export default function App() {
             </a>
             {auth.user.role === "admin" && (
               <>
-                <div className="nav-label">MANAGEMENT</div>
-                <a className={route === "/admin" ? "active" : ""} href="#/admin">
+                <div className="nav-label">管理者メニュー</div>
+                <a
+                  className={route === "/admin" ? "active" : ""}
+                  href="#/admin"
+                >
                   <Icon name="users" />
                   利用者と閲覧許可
                 </a>
@@ -1449,10 +1503,18 @@ export default function App() {
         </aside>
         <div className="main-shell">
           <header className="topbar">
-            <span>つながりを、チームの力に。</span>
+            <span>
+              名刺ノート /{" "}
+              {route === "/new"
+                ? "名刺登録"
+                : detailId
+                  ? "名刺の詳細"
+                  : route === "/admin" && auth.user.role === "admin"
+                    ? "利用者と閲覧許可"
+                    : "名刺一覧"}
+            </span>
             <span className="workspace-tag">
-              <i />
-              名刺ワークスペース
+              {auth.user.role === "admin" ? "管理者" : "一般利用者"}
             </span>
             <button
               className="mobile-logout"
@@ -1493,7 +1555,7 @@ export default function App() {
             )}
           </main>
           <footer className="workspace-footer">
-            MEISHI NOTE <span>一枚の名刺から、つながりを育てる。</span>
+            名刺ノート <span>チームの名刺帳</span>
           </footer>
         </div>
       </div>
