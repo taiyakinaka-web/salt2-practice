@@ -5,4 +5,4 @@ if [[ ! -f frontend/dist/index.html ]]; then
   printf '%s\n' 'Frontend build missing. Run: bash scripts/setup.sh' >&2
   exit 1
 fi
-exec backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
+exec backend/.venv/bin/python -m uvicorn app.asgi:app --app-dir backend --host 127.0.0.1 --port 8000

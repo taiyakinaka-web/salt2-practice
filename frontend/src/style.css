@@ -1422,3 +1422,15 @@ small,
     animation: none;
   }
 }
+
+.replacement-choice h2 {
+  margin-bottom: 8px;
+}
+.replacement-choice p {
+  margin-bottom: 12px;
+}
+.replacement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

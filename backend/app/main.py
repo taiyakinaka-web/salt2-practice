@@ -10,7 +10,6 @@ from typing import Literal
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
-from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
@@ -28,7 +27,6 @@ from .models import Card, Company, Department, Grant, LoginSession, Person, User
 from .schemas import CardCreate, Credentials, GrantCreate, NewUser
 
 ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(ROOT / ".env")
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -212,7 +210,7 @@ def create_app(database_path=None, settings=None):
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         login_session = db.get(LoginSession, token_hash)
         if not login_session or login_session.expires_at <= utcnow():
-            fail(401, "authentication_required", "Your session has expired. ログインしてください。")
+            fail(401, "authentication_required", "セッションの有効期限が切れました。もう一度ログインしてください。")
         user = db.get(User, login_session.user_id)
         if not user:
             fail(401, "authentication_required", "ログインしてください。")
@@ -453,6 +451,3 @@ def create_app(database_path=None, settings=None):
             return FileResponse(dist / "index.html")
 
     return app
-
-
-app = create_app()

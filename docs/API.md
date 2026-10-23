@@ -22,7 +22,7 @@ DELETE /admin/users/{id}/grants/{grant_id} returns 204.
 Grant = {id,scope,target_id,label}. User = {id,email,role}.
 Use label with identifying company/department context and ID, never identify people by name alone.
 
-Backend location: backend/app/. Entrypoint app.main:app.
+Backend location: backend/app/. Entrypoint app.asgi:app.
 create_app(database_path=None, settings=None) creates an isolated app for tests.
 settings accepts admin_email, admin_password, allowed_origins, secure_cookie, session_ttl_seconds.
 AI adapter: backend/app/ai.py, async extract_fields(image_bytes: bytes, mime: str) -> dict[str,str].

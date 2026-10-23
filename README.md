@@ -5,10 +5,11 @@
 名刺画像を取り込み、AIの読み取り結果を確認・修正して保存する、1組織向けの名刺管理アプリです。氏名・会社名で検索でき、管理者が企業・部署・人物単位で閲覧範囲を設定できます。
 
 **実装済み：** ログイン、名刺の登録・検索・詳細・元画像表示、利用者追加、閲覧許可の付与・解除、Claude接続処理。
-**検証済み：** 自動テスト66件、TypeScript型チェック、本番ビルド、Chromeでの主要操作。
+**検証済み：** 自動テスト78件、TypeScript型チェック、本番ビルド、Chromeでの主要操作。
 **未確認：** 実際のAI読み取り精度。提供キーでModels APIがHTTP 401 `authentication_error / invalid x-api-key`を返し、モデルの確認・画像送信には進めていません。
 
 - [仕様書](docs/SPEC.md)
+- [実装判断と機能の詳しい説明](docs/IMPLEMENTATION.md)
 - [API仕様](docs/API.md)
 - [動作確認記録](docs/VERIFICATION.md)
 
@@ -21,7 +22,7 @@
 | 保存 | SQLite。元画像もBLOBで同じDBに保存 |
 | 認証 | Argon2パスワードハッシュ、DB管理のセッションCookie |
 | AI | Anthropic公式Python SDK。画像対応ClaudeのモデルIDを環境変数で指定 |
-| 検証 | pytest、HTTPX、TypeScript、Vite、Chrome |
+| 検証 | pytest、HTTPX、Vitest、Testing Library、TypeScript、Vite、Chrome |
 
 対応画像は**JPEG・PNG、1枚5MiB以下、2,000万画素以下**です。画像の実データをデコードして検証します。依存関係は `frontend/package-lock.json` と `backend/requirements.lock.txt` に固定しています。
 
@@ -121,6 +122,15 @@ AとBがそれぞれ別企業の名刺を登録します。両企業に同名部
 - **保存と画像は一体です。** 元画像・確定情報・登録者を同じDBトランザクションで保存します。登録者はログイン情報から設定し、入力による偽装を拒否します。再送は利用者ごとのrequest_idで重複を防ぎます。
 - **認証情報をブラウザーへ公開しません。** セッションCookieはHttpOnly、DBにはトークンのハッシュを保持します。更新系にはOriginとCSRFトークンの検査を行います。画像も認証付きAPIで取得し、キャッシュを抑止します。
 
+
+## APIキーを使わない部分の改善
+
+- 期限切れでは再ログインを表示し、同じ利用者なら画像・入力・人物の紐付けを保持して再開します。別利用者への切り替えと明示的なログアウトでは破棄します。
+- 画像を差し替える際は「別の名刺としてクリア」「同じ名刺の撮り直しとして保持」「キャンセル」を選択します。
+- 保存後も同じ画像ファイルを再選択できます。
+- 権限一覧の取得失敗は「許可なし」と区別し、再試行を表示します。
+- 実起動だけが `.env` と通常DBを初期化するよう、`app.asgi` とアプリ生成関数を分離しました。
+
 ## テストと開発
 
 ```bash
@@ -135,6 +145,7 @@ cd backend
 cd ..
 source ~/.nvm/nvm.sh
 nvm use
+npm --prefix frontend test
 npm --prefix frontend run build
 ```
 
@@ -142,7 +153,7 @@ npm --prefix frontend run build
 
 ```bash
 # API
-backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+backend/.venv/bin/python -m uvicorn app.asgi:app --app-dir backend --reload --host 127.0.0.1 --port 8000
 ```
 
 ```bash
@@ -170,7 +181,7 @@ Viteの http://localhost:5173 から `/api` をバックエンドへ転送しま
 
 Codexを仕様整理、実装、テスト作成、コード確認、ブラウザー操作確認、README作成に使用しました。ユーザーの指定によりsubagentでバックエンド・画面・テストを分担し、バックエンドはGPT-6 Astra、画面とテストはGPT-6.1 Solを使用しました。
 
-判断した点は、同名による権限混同を避けるID設計、元画像まで共通化した権限制御、入力内容を保持する再試行、AIモックと実API確認の分離です。生成結果は66件のテスト、型チェック・ビルド、実ブラウザーで確認しました。AIの実抽出精度は未確認として明示しています。
+判断した点は、同名による権限混同を避けるID設計、元画像まで共通化した権限制御、入力内容を保持する再試行、AIモックと実API確認の分離です。生成結果は78件のテスト、型チェック・ビルド、実ブラウザーで確認しました。AIの実抽出精度は未確認として明示しています。
 
 ## 制約と提出
 
